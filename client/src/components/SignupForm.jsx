@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
-
-import { createUser } from '../utils/API';
+import { useMutation } from "@apollo/client";
+import { ADD_USER } from "../utils/mutations";
 import Auth from '../utils/auth';
 
 const SignupForm = () => {
@@ -12,6 +12,10 @@ const SignupForm = () => {
   // set state for alert
   const [showAlert, setShowAlert] = useState(false);
 
+  const [addUserMutation, { error }] = useMutation(ADD_USER, {
+    fetchPolicy: 'no-cache'
+  });
+
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setUserFormData({ ...userFormData, [name]: value });
@@ -19,8 +23,8 @@ const SignupForm = () => {
 
   const handleFormSubmit = async (event) => {
     event.preventDefault();
+    console.log(userFormData);
 
-    // check if form has everything (as per react-bootstrap docs)
     const form = event.currentTarget;
     if (form.checkValidity() === false) {
       event.preventDefault();
@@ -28,13 +32,22 @@ const SignupForm = () => {
     }
 
     try {
-      const response = await createUser(userFormData);
+      const response = await addUserMutation({
+        variables: {
+          username: userFormData.username,
+          email: userFormData.email,
+          password: userFormData.password
+        }
+      });
 
-      if (!response.ok) {
-        throw new Error('something went wrong!');
+      console.log("Mutation Response:", response);
+
+      const addUserFromResponse = response && response.data && response.data.addUser;
+      if (!addUserFromResponse) {
+        console.error("Failed to add user. No data returned from server.");
+        throw new Error('No user data returned from mutation.');
       }
-
-      const { token, user } = await response.json();
+      const { token, user } = addUserFromResponse;
       console.log(user);
       Auth.login(token);
     } catch (err) {
@@ -51,13 +64,11 @@ const SignupForm = () => {
 
   return (
     <>
-      {/* This is needed for the validation functionality above */}
+      {error && <div>Something went wrong...</div>}
       <Form noValidate validated={validated} onSubmit={handleFormSubmit}>
-        {/* show alert if server response is bad */}
         <Alert dismissible onClose={() => setShowAlert(false)} show={showAlert} variant='danger'>
           Something went wrong with your signup!
         </Alert>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='username'>Username</Form.Label>
           <Form.Control
@@ -70,7 +81,6 @@ const SignupForm = () => {
           />
           <Form.Control.Feedback type='invalid'>Username is required!</Form.Control.Feedback>
         </Form.Group>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='email'>Email</Form.Label>
           <Form.Control
@@ -83,7 +93,6 @@ const SignupForm = () => {
           />
           <Form.Control.Feedback type='invalid'>Email is required!</Form.Control.Feedback>
         </Form.Group>
-
         <Form.Group className='mb-3'>
           <Form.Label htmlFor='password'>Password</Form.Label>
           <Form.Control
