@@ -1,10 +1,5 @@
 const { User } = require("../models");
-
-const {
-  AuthenticationError,
-  authMiddleware,
-  signToken,
-} = require("../utils/auth");
+const { AuthenticationError, signToken } = require("../utils/auth");
 
 const resolvers = {
   Query: {
@@ -77,3 +72,5 @@ const resolvers = {
     },
   },
 };
+
+module.exports = resolvers;
